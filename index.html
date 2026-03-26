@@ -1,81 +1,63 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Sniper: NEON PLUTO - 3 LIVES EDITION</title>
+    <title>3D Sniper: NEON PLUTO - MOBILE EDITION</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
-        body { 
-            margin: 0; 
-            overflow: hidden; 
-            font-family: 'Arial Black', sans-serif; 
-            background: #87CEEB; 
-            touch-action: none; /* Prevents mobile pull-to-refresh */
-            overscroll-behavior: none;
-            user-select: none; 
-            -webkit-user-select: none;
-        }
-        #ui { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 12px; border: 4px solid #000; z-index: 20; font-size: 13px; box-shadow: 6px 6px 0px #000; width: 220px; pointer-events: none;}
-        #minimap { position: absolute; top: 10px; right: 10px; width: 140px; height: 140px; background: rgba(255,255,255,0.8); border: 4px solid #000; z-index: 20; box-shadow: 4px 4px 0px #000; pointer-events: none; }
+        body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background: #87CEEB; touch-action: none; user-select: none; -webkit-user-select: none; }
+        
+        /* UI Elements */
+        #ui { position: absolute; top: 10px; left: 10px; background: rgba(255,255,255,0.9); padding: 12px; border: 4px solid #000; z-index: 20; font-size: 13px; box-shadow: 6px 6px 0px #000; width: 220px; }
+        #minimap { position: absolute; top: 10px; right: 10px; width: 140px; height: 140px; background: rgba(255,255,255,0.8); border: 4px solid #000; z-index: 20; box-shadow: 4px 4px 0px #000; }
         #crosshair { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; border: 2px solid red; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
+        
+        /* Scope Effect */
         #scope-vignette { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9; opacity: 0; background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.8) 100%); transition: 0.1s; }
         .scoped #scope-vignette { opacity: 1; }
+        
+        /* Overlay */
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; flex-direction: column; z-index: 100; text-align: center; }
-        #start-btn { padding: 20px 60px; font-size: 24px; background: #000; color: #fff; border: none; cursor: pointer; box-shadow: 6px 6px 0px #00ffcc; }
+        button.main-btn { padding: 20px 60px; font-size: 24px; background: #000; color: #fff; border: none; cursor: pointer; box-shadow: 6px 6px 0px #00ffcc; font-family: 'Arial Black', sans-serif; }
         #invincible-msg { color: red; font-weight: bold; display: none; }
 
-        /* Mobile Controls UI */
-        #mobile-controls { display: none; }
-        .m-btn { 
-            position: absolute; bottom: 30px; 
-            background: rgba(0, 0, 0, 0.5); border: 3px solid #00ffcc; 
-            color: #00ffcc; font-size: 18px; font-weight: bold; 
-            padding: 15px; border-radius: 50%; width: 70px; height: 70px; 
-            z-index: 30; touch-action: none;
-        }
-        #fire-btn { right: 30px; bottom: 40px; background: rgba(255, 0, 0, 0.5); border-color: red; color: white; width: 80px; height: 80px;}
-        #scope-btn { right: 120px; bottom: 30px; }
+        /* Mobile Controls */
+        #mobile-controls { display: none; width: 100%; height: 100%; position: absolute; top: 0; left: 0; pointer-events: none; z-index: 50; }
+        #joystick-zone { position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px; background: rgba(0,0,0,0.2); border: 4px solid rgba(255,255,255,0.5); border-radius: 50%; pointer-events: auto; }
+        #joystick-knob { position: absolute; top: 36px; left: 36px; width: 40px; height: 40px; background: rgba(255,255,255,0.8); border-radius: 50%; box-shadow: 2px 2px 10px rgba(0,0,0,0.5); }
+        #scope-btn { position: absolute; bottom: 30px; right: 30px; width: 80px; height: 80px; background: rgba(0,0,0,0.5); color: #fff; border: 4px solid rgba(255,255,255,0.5); border-radius: 50%; font-weight: bold; pointer-events: auto; font-family: 'Arial Black', sans-serif; }
         
-        #joystick {
-            position: absolute; bottom: 40px; left: 40px;
-            width: 120px; height: 120px; background: rgba(255, 255, 255, 0.2);
-            border: 3px solid #000; border-radius: 50%; z-index: 30; touch-action: none;
-        }
-        #knob {
-            position: absolute; top: 50%; left: 50%;
-            width: 50px; height: 50px; background: #00ffcc;
-            border: 2px solid #000; border-radius: 50%;
-            transform: translate(-50%, -50%); pointer-events: none;
-        }
-
-        /* Show mobile controls only on touch devices */
-        @media (pointer: coarse) {
+        /* Show mobile controls on smaller screens */
+        @media (max-width: 1024px) {
             #mobile-controls { display: block; }
-            #minimap { width: 100px; height: 100px; } /* Smaller minimap for phones */
-            #ui { width: 180px; font-size: 11px; }
+            #minimap { width: 100px; height: 100px; } /* Shrink minimap on phones */
         }
     </style>
 </head>
 <body oncontextmenu="return false;">
     <canvas id="minimap" width="180" height="180"></canvas>
+    
     <div id="ui">
         <b id="time-ui">TIME: 0s</b><br>
         SCORE: <span id="score-val">0</span><br>
         AMMO: <span id="ammo">200</span> | ❤ <span id="lives-val">3</span><br>
         <span id="invincible-msg">INVINCIBLE!</span>
     </div>
-    
+
     <div id="mobile-controls">
-        <div id="joystick"><div id="knob"></div></div>
-        <button class="m-btn" id="scope-btn">SCOPE</button>
-        <button class="m-btn" id="fire-btn">FIRE</button>
+        <div id="joystick-zone"><div id="joystick-knob"></div></div>
+        <button id="scope-btn">SCOPE</button>
     </div>
 
     <div id="crosshair"></div>
     <div id="scope-vignette"></div>
+    
     <div id="overlay">
         <h1>3D NEON PLUTO</h1>
-        <p style="font-size: 24PX;">Feel the 3D</p>
-        <button id="start-btn">START GAME</button>
+        <p style="font-size: 18px; max-width: 80%;">
+            <b>PC:</b> WASD to move, Mouse to look/shoot, Shift to scope.<br><br>
+            <b>Mobile:</b> Left joystick to move, Drag right screen to look, Tap right screen to shoot!
+        </p>
+        <button id="start-btn" class="main-btn">START GAME</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -94,6 +76,11 @@
         let lives = 3, ammo = 200, score = 0, gameOver = true, isZoomed = false;
         let startTime = 0, difficultyMult = 1.0, invincibilityTimer = 0;
         
+        // Touch Variables
+        let touchMoveID = null, touchLookID = null;
+        let joyStartX = 0, joyStartY = 0, joyX = 0, joyY = 0;
+        let lookPrevX = 0, lookPrevY = 0, isDraggingLook = false;
+
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
         scene.fog = new THREE.Fog(0x87CEEB, 10, 1500);
@@ -161,100 +148,110 @@
             }
         }
 
-        // --- Desktop Controls ---
+        // --- CONTROLS: PC ---
         let keys = {};
         window.onkeydown = (e) => { keys[e.code] = true; if(e.code.includes('Shift')) isZoomed=true; };
         window.onkeyup = (e) => { keys[e.code] = false; if(e.code.includes('Shift')) isZoomed=false; };
-        window.addEventListener('mousemove', (e) => { if(document.pointerLockElement) { camera.rotation.y -= e.movementX * 0.003; camera.rotation.x -= e.movementY * 0.003; camera.rotation.x = Math.max(-1.4, Math.min(1.4, camera.rotation.x)); } });
-        window.onmousedown = (e) => { if(!gameOver && e.target.tagName !== 'BUTTON' && !('ontouchstart' in window)) fire(); };
+        window.addEventListener('mousemove', (e) => { 
+            if(document.pointerLockElement) { 
+                camera.rotation.y -= e.movementX * 0.003; 
+                camera.rotation.x -= e.movementY * 0.003; 
+                camera.rotation.x = Math.max(-1.4, Math.min(1.4, camera.rotation.x)); 
+            } 
+        });
+        window.onmousedown = (e) => { 
+            if(!gameOver && e.target.tagName !== 'BUTTON') fire(); 
+        };
 
-        // --- Mobile Touch Controls ---
-        let touchMoveX = 0, touchMoveZ = 0;
-        let lookTouchId = null, lastTouchX = 0, lastTouchY = 0;
-        
-        // Touch Look Area (Background)
-        renderer.domElement.addEventListener('touchstart', e => {
+        // --- CONTROLS: MOBILE TOUCH ---
+        const joyZone = document.getElementById('joystick-zone');
+        const joyKnob = document.getElementById('joystick-knob');
+        const scopeBtn = document.getElementById('scope-btn');
+
+        scopeBtn.addEventListener('touchstart', (e) => { e.preventDefault(); isZoomed = !isZoomed; }, {passive: false});
+
+        window.addEventListener('touchstart', (e) => {
+            if(gameOver) return;
             for(let i=0; i<e.changedTouches.length; i++) {
                 let t = e.changedTouches[i];
-                if (t.clientX > window.innerWidth / 3) { // Use right side for looking
-                    lookTouchId = t.identifier;
-                    lastTouchX = t.clientX;
-                    lastTouchY = t.clientY;
+                if(t.target === joyZone || t.target === joyKnob) {
+                    touchMoveID = t.identifier;
+                    let rect = joyZone.getBoundingClientRect();
+                    joyStartX = rect.left + rect.width/2;
+                    joyStartY = rect.top + rect.height/2;
+                    updateJoystick(t.clientX, t.clientY);
+                } else if(t.clientX > window.innerWidth / 2 && t.target !== scopeBtn) {
+                    // Right side of screen for aiming
+                    touchLookID = t.identifier;
+                    lookPrevX = t.clientX;
+                    lookPrevY = t.clientY;
+                    isDraggingLook = false;
                 }
             }
-        });
-        renderer.domElement.addEventListener('touchmove', e => {
+        }, {passive: false});
+
+        window.addEventListener('touchmove', (e) => {
+            if(gameOver) return;
+            e.preventDefault(); // Prevent scrolling on mobile
             for(let i=0; i<e.changedTouches.length; i++) {
                 let t = e.changedTouches[i];
-                if(t.identifier === lookTouchId) {
-                    camera.rotation.y -= (t.clientX - lastTouchX) * 0.005;
-                    camera.rotation.x -= (t.clientY - lastTouchY) * 0.005;
+                if(t.identifier === touchMoveID) {
+                    updateJoystick(t.clientX, t.clientY);
+                } else if(t.identifier === touchLookID) {
+                    let dx = t.clientX - lookPrevX;
+                    let dy = t.clientY - lookPrevY;
+                    if(Math.abs(dx) > 3 || Math.abs(dy) > 3) isDraggingLook = true;
+                    
+                    camera.rotation.y -= dx * 0.005;
+                    camera.rotation.x -= dy * 0.005;
                     camera.rotation.x = Math.max(-1.4, Math.min(1.4, camera.rotation.x));
-                    lastTouchX = t.clientX;
-                    lastTouchY = t.clientY;
+                    
+                    lookPrevX = t.clientX;
+                    lookPrevY = t.clientY;
                 }
             }
-        });
-        renderer.domElement.addEventListener('touchend', e => {
-            for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === lookTouchId) lookTouchId = null;
-            }
-        });
+        }, {passive: false});
 
-        // Joystick
-        const joystick = document.getElementById('joystick');
-        const knob = document.getElementById('knob');
-        let joyTouchId = null, joyCX = 0, joyCY = 0;
-
-        joystick.addEventListener('touchstart', e => {
-            let t = e.changedTouches[0];
-            joyTouchId = t.identifier;
-            let rect = joystick.getBoundingClientRect();
-            joyCX = rect.left + rect.width / 2;
-            joyCY = rect.top + rect.height / 2;
-            updateJoystick(t.clientX, t.clientY);
-        });
-        joystick.addEventListener('touchmove', e => {
+        window.addEventListener('touchend', (e) => {
             for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === joyTouchId) updateJoystick(e.changedTouches[i].clientX, e.changedTouches[i].clientY);
-            }
-        });
-        joystick.addEventListener('touchend', e => {
-            for(let i=0; i<e.changedTouches.length; i++) {
-                if(e.changedTouches[i].identifier === joyTouchId) {
-                    joyTouchId = null;
-                    knob.style.transform = `translate(-50%, -50%)`;
-                    touchMoveX = 0; touchMoveZ = 0;
+                let t = e.changedTouches[i];
+                if(t.identifier === touchMoveID) {
+                    touchMoveID = null;
+                    joyX = 0; joyY = 0;
+                    joyKnob.style.transform = `translate(0px, 0px)`;
+                } else if(t.identifier === touchLookID) {
+                    touchLookID = null;
+                    if(!isDraggingLook && !gameOver) fire(); // Tap to fire
                 }
             }
         });
 
-        function updateJoystick(x, y) {
-            let dx = x - joyCX, dy = y - joyCY;
-            let dist = Math.sqrt(dx*dx + dy*dy), maxDist = 40;
-            if(dist > maxDist) { dx = (dx/dist)*maxDist; dy = (dy/dist)*maxDist; }
-            knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-            touchMoveX = dx / maxDist; 
-            touchMoveZ = dy / maxDist;
+        function updateJoystick(cx, cy) {
+            let dx = cx - joyStartX;
+            let dy = cy - joyStartY;
+            let dist = Math.sqrt(dx*dx + dy*dy);
+            let maxDist = 40; // Max drag distance for knob
+            if(dist > maxDist) {
+                dx = (dx/dist) * maxDist;
+                dy = (dy/dist) * maxDist;
+            }
+            joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+            joyX = dx / maxDist;
+            joyY = dy / maxDist;
         }
 
-        // Mobile Buttons
-        document.getElementById('fire-btn').addEventListener('touchstart', (e) => { e.preventDefault(); if(!gameOver) fire(); });
-        document.getElementById('scope-btn').addEventListener('touchstart', (e) => { e.preventDefault(); isZoomed = !isZoomed; });
-
-
+        // --- GAME LOGIC ---
         document.getElementById('start-btn').onclick = () => {
             audioCtx.resume(); 
             lives=3; ammo=200; score=0; invincibilityTimer = 0; gameOver=false; 
+            isZoomed = false; // Reset zoom state
             startTime = Date.now();
             document.getElementById('score-val').innerText = "0";
             document.getElementById('lives-val').innerText = "3";
             document.getElementById('overlay').style.display='none';
             spawn(); 
             camera.position.set(0, 10, 0);
-            
-            // Only lock pointer on desktop
-            if(!('ontouchstart' in window) && window.innerWidth > 1024) document.body.requestPointerLock();
+            if(window.innerWidth > 1024) document.body.requestPointerLock();
         };
 
         function fire() {
@@ -290,7 +287,6 @@
             difficultyMult = 1.0 + (elapsed * 0.025);
             document.getElementById('time-ui').innerText = `TIME: ${elapsed}s`;
             
-            // Handle Invincibility
             if(invincibilityTimer > 0) {
                 invincibilityTimer -= dt;
                 document.getElementById('invincible-msg').style.display = 'inline';
@@ -304,10 +300,14 @@
             camera.updateProjectionMatrix();
             document.body.classList.toggle('scoped', isZoomed);
 
-            // Combine Desktop Keyboard & Mobile Touch Inputs
-            let kz = (keys['KeyW'] || keys['ArrowUp'] ? -1 : 0) + (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + touchMoveZ;
-            let kx = (keys['KeyA'] || keys['ArrowLeft'] ? -1 : 0) + (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) + touchMoveX;
+            // Combine Keyboard AND Mobile Joystick inputs
+            let kz = (keys['KeyW'] || keys['ArrowUp'] ? -1 : 0) + (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0) + joyY;
+            let kx = (keys['KeyA'] || keys['ArrowLeft'] ? -1 : 0) + (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0) + joyX;
             
+            // Clamp speed so diagonal joystick isn't faster
+            kz = Math.max(-1, Math.min(1, kz));
+            kx = Math.max(-1, Math.min(1, kx));
+
             camera.translateZ(kz * 160 * difficultyMult * dt);
             camera.translateX(kx * 160 * difficultyMult * dt);
             camera.position.y = 10;
@@ -358,6 +358,13 @@
             renderer.render(scene, camera);
         }
 
+        // Handle window resize dynamically
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
         function resetPlayer() {
             lives--; 
             document.getElementById('lives-val').innerText = lives; 
@@ -367,17 +374,9 @@
                 gameOver = true; 
                 document.getElementById('overlay').style.display = 'flex'; 
                 document.getElementById('overlay').querySelector('h1').innerText = "GAME OVER";
-                if(document.pointerLockElement) document.exitPointerLock(); 
+                document.exitPointerLock(); 
             }
         }
-        
-        // Handle window resize cleanly
-        window.addEventListener('resize', () => {
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
-
         loop();
     </script>
 </body>
