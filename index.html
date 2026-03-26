@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>3D Sniper: NEON PLUTO - OVERDRIVE</title>
+    <title>3D Sniper: NEON PLUTO - 3 LIVES EDITION</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <style>
         body { margin: 0; overflow: hidden; font-family: 'Arial Black', sans-serif; background: #87CEEB; touch-action: none; user-select: none; }
@@ -10,12 +10,9 @@
         #crosshair { position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; border: 2px solid red; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
         #scope-vignette { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9; opacity: 0; background: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.8) 100%); transition: 0.1s; }
         .scoped #scope-vignette { opacity: 1; }
-        #zoom-btn { position: absolute; bottom: 40px; right: 40px; width: 90px; height: 90px; background: #000; color: #fff; border-radius: 50%; z-index: 50; display: flex; align-items: center; justify-content: center; }
-        #joystick-zone { position: absolute; bottom: 40px; left: 40px; width: 110px; height: 110px; background: rgba(0,0,0,0.1); border-radius: 50%; border: 3px solid #000; z-index: 50; }
-        #joystick-stick { position: absolute; top: 35px; left: 35px; width: 40px; height: 40px; background: #000; border-radius: 50%; }
         #overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #fff; flex-direction: column; z-index: 100; text-align: center; }
         button { padding: 20px 60px; font-size: 24px; background: #000; color: #fff; border: none; cursor: pointer; box-shadow: 6px 6px 0px #00ffcc; }
-        @media (min-width: 1024px) { #joystick-zone, #zoom-btn { display: none; } }
+        #invincible-msg { color: red; font-weight: bold; display: none; }
     </style>
 </head>
 <body oncontextmenu="return false;">
@@ -23,12 +20,11 @@
     <div id="ui">
         <b id="time-ui">TIME: 0s</b><br>
         SCORE: <span id="score-val">0</span><br>
-        AMMO: <span id="ammo">100</span> | ❤ <span id="lives-val">3</span>
+        AMMO: <span id="ammo">200</span> | ❤ <span id="lives-val">3</span><br>
+        <span id="invincible-msg">INVINCIBLE!</span>
     </div>
     <div id="crosshair"></div>
     <div id="scope-vignette"></div>
-    <div id="zoom-btn">SCOPE</div>
-    <div id="joystick-zone"><div id="joystick-stick"></div></div>
     <div id="overlay">
         <h1>3D NEON PLUTO</h1>
         <p style="font-size: 24PX;">Feel the 3D</p>
@@ -48,7 +44,7 @@
         }
 
         let lives = 3, ammo = 200, score = 0, gameOver = true, isZoomed = false;
-        let startTime = 0, difficultyMult = 1.0;
+        let startTime = 0, difficultyMult = 1.0, invincibilityTimer = 0;
         
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x87CEEB);
@@ -92,9 +88,7 @@
         function spawn() {
             [gems, killers, projectiles, buildings, bombs, particles].forEach(a => a.forEach(o => scene.remove(o.mesh || o)));
             gems=[]; killers=[]; projectiles=[]; buildings=[]; bombs=[]; particles=[];
-            
             const neonColors = [0xff00ff, 0x00d2ff, 0x33ffaa, 0xffaa00];
-            
             for(let i=0; i<400; i++) {
                 let h = Math.random() * 120 + 20;
                 const col = neonColors[Math.floor(Math.random() * neonColors.length)];
@@ -126,10 +120,18 @@
         window.onmousedown = () => { if(!gameOver) fire(); };
 
         document.getElementById('start-btn').onclick = () => {
-            audioCtx.resume(); lives=3; ammo=200; score=0; gameOver=false; startTime = Date.now();
+            audioCtx.resume(); 
+            lives=3; // Ensure 3 lives at start
+            ammo=200; 
+            score=0; 
+            invincibilityTimer = 0;
+            gameOver=false; 
+            startTime = Date.now();
             document.getElementById('score-val').innerText = "0";
+            document.getElementById('lives-val').innerText = "3";
             document.getElementById('overlay').style.display='none';
-            spawn(); camera.position.set(0, 10, 0);
+            spawn(); 
+            camera.position.set(0, 10, 0);
             if(window.innerWidth > 1024) document.body.requestPointerLock();
         };
 
@@ -140,7 +142,6 @@
             const p = new THREE.Mesh(new THREE.SphereGeometry(1.2), new THREE.MeshBasicMaterial({color: 0xff0000}));
             p.position.copy(camera.position);
             const d = new THREE.Vector3(); camera.getWorldDirection(d);
-            // BULLET SPEED INCREASED: 3000
             projectiles.push({mesh: p, vel: d.multiplyScalar(3000)});
             scene.add(p);
         }
@@ -164,14 +165,23 @@
             const dt = 0.016;
             
             let elapsed = Math.floor((Date.now() - startTime) / 1000);
-            difficultyMult = 1.0 + (elapsed * 0.025); // Faster scaling
+            difficultyMult = 1.0 + (elapsed * 0.025);
             document.getElementById('time-ui').innerText = `TIME: ${elapsed}s`;
             
+            // Handle Invincibility
+            if(invincibilityTimer > 0) {
+                invincibilityTimer -= dt;
+                document.getElementById('invincible-msg').style.display = 'inline';
+                renderer.domElement.style.opacity = Math.sin(Date.now()*0.02) > 0 ? "0.5" : "1";
+            } else {
+                document.getElementById('invincible-msg').style.display = 'none';
+                renderer.domElement.style.opacity = "1";
+            }
+
             camera.fov += ((isZoomed ? 15 : 75) - camera.fov) * 0.25;
             camera.updateProjectionMatrix();
             document.body.classList.toggle('scoped', isZoomed);
 
-            // PLAYER SPEED INCREASED: 160
             let kz = (keys['KeyW'] || keys['ArrowUp'] ? -1 : 0) + (keys['KeyS'] || keys['ArrowDown'] ? 1 : 0);
             let kx = (keys['KeyA'] || keys['ArrowLeft'] ? -1 : 0) + (keys['KeyD'] || keys['ArrowRight'] ? 1 : 0);
             camera.translateZ(kz * 160 * difficultyMult * dt);
@@ -190,8 +200,7 @@
                 p.mesh.position.add(p.vel.clone().multiplyScalar(dt));
                 killers.forEach(k => { 
                     if(p.mesh.position.distanceTo(k.position) < 40) { 
-                        score += 100; 
-                        document.getElementById('score-val').innerText = score;
+                        score += 100; document.getElementById('score-val').innerText = score;
                         explode(k.position);
                         k.position.set(Math.random()*3600-1800, 0, Math.random()*3600-1800);
                         scene.remove(p.mesh); projectiles.splice(i,1);
@@ -201,12 +210,10 @@
             });
 
             gems.forEach((g, gi) => {
-                g.rotation.y += 0.1; // Faster rotation
+                g.rotation.y += 0.1;
                 if(camera.position.distanceTo(g.position) < 18) {
-                    score += 50;
-                    document.getElementById('score-val').innerText = score;
-                    scene.remove(g);
-                    gems.splice(gi, 1);
+                    score += 50; document.getElementById('score-val').innerText = score;
+                    scene.remove(g); gems.splice(gi, 1);
                 }
             });
 
@@ -214,22 +221,30 @@
                 const dist = camera.position.distanceTo(k.position);
                 if(dist < 1200) {
                     k.lookAt(camera.position.x, 0, camera.position.z);
-                    // KILLER SPEED INCREASED: 75
                     k.position.add(new THREE.Vector3().subVectors(camera.position, k.position).normalize().multiplyScalar(75 * difficultyMult * dt));
                 }
-                if(dist < 15) resetPlayer();
+                if(dist < 15 && invincibilityTimer <= 0) resetPlayer();
             });
 
-            bombs.forEach(b => { if(camera.position.distanceTo(b.position) < 15) resetPlayer(); });
+            bombs.forEach(b => { 
+                if(camera.position.distanceTo(b.position) < 15 && invincibilityTimer <= 0) resetPlayer(); 
+            });
             
             updateMinimap();
             renderer.render(scene, camera);
         }
 
         function resetPlayer() {
-            lives--; document.getElementById('lives-val').innerText=lives; 
-            camera.position.set(0,10,0); 
-            if(lives<=0) { gameOver=true; document.getElementById('overlay').style.display='flex'; document.exitPointerLock(); }
+            lives--; 
+            document.getElementById('lives-val').innerText = lives; 
+            invincibilityTimer = 2.0; // 2 seconds of safety
+            camera.position.set(0, 10, 0); 
+            if(lives <= 0) { 
+                gameOver = true; 
+                document.getElementById('overlay').style.display = 'flex'; 
+                document.getElementById('overlay').querySelector('h1').innerText = "GAME OVER";
+                document.exitPointerLock(); 
+            }
         }
         loop();
     </script>
